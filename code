@@ -1,0 +1,89 @@
+Problem
+Classifying emails into spam and not spam.
+Approach
+- Converting the labels into binary (0, 1)
+- Converting features into vector so our model can understand
+- Creating a multinomial model
+- Training and testing the model
+Using pandas to read the csv and converting into dataframe
+import pandas as pd
+df = pd.read_csv('spam.csv')
+df.head()
+Category	Message
+0	ham	Go until jurong point, crazy.. Available only ...
+1	ham	Ok lar... Joking wif u oni...
+2	spam	Free entry in 2 a wkly comp to win FA Cup fina...
+3	ham	U dun say so early hor... U c already then say...
+4	ham	Nah I don't think he goes to usf, he lives aro...
+Data conversion
+As you can see the 'Category' column contains the labels, but it is in the form of strings, so our model wont understand it. This can by fixed by-
+Converting the labels into binary by applying lambda function
+(If label is 'spam', change it to 1, if label is 'ham' change it to 0)
+df['spam'] = df['Category'].apply(lambda x: 1 if x=='spam' else 0)
+df.head()
+Category	Message	spam
+0	ham	Go until jurong point, crazy.. Available only ...	0
+1	ham	Ok lar... Joking wif u oni...	0
+2	spam	Free entry in 2 a wkly comp to win FA Cup fina...	1
+3	ham	U dun say so early hor... U c already then say...	0
+4	ham	Nah I don't think he goes to usf, he lives aro...	0
+Dropping the actual 'Category' column since we dont need it now
+df = df.drop('Category', axis=1)
+df.head()
+Message	spam
+0	Go until jurong point, crazy.. Available only ...	0
+1	Ok lar... Joking wif u oni...	0
+2	Free entry in 2 a wkly comp to win FA Cup fina...	1
+3	U dun say so early hor... U c already then say...	0
+4	Nah I don't think he goes to usf, he lives aro...	0
+Data splitting
+Using train_test_split from sklearn.model_selection to split the data into training data and testing data
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(df.Message, df.spam, test_size=0.25)
+Further Approaches
+Now we need to convert our features into a vector count and then use it in our model. This can be done in 2 ways-
+1. Doing all the steps seperately each time
+2. Creating a pipeline consisting of all the steps
+1. Doing all the steps seperately each time
+Converting the features into vector count using the CountVectorizer class from sklearn
+from sklearn.feature_extraction.text import CountVectorizer
+vector = CountVectorizer()
+X_train_vector = vector.fit_transform(X_train.values)
+X_train_vector.toarray()[:3]
+array([[0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0],
+       [0, 0, 0, ..., 0, 0, 0]])
+Creating a model and fitting all the data using the MultinomialNB class from sklearn
+from sklearn.naive_bayes import MultinomialNB
+model = MultinomialNB()
+model.fit(X_train_vector, y_train)
+MultinomialNB()
+Converting the test data into vector and checking accuracy
+X_test_vector = vector.transform(X_test)
+model.score(X_test_vector, y_test)
+0.9870782483847811
+Converting the emails list to vector and predicting
+emails = [
+    "Discount!! 50% discount on your first buy order",
+    "Hey dude, can you pick me out tonight?",
+    "Could you join me to watch a movie tonight??",
+    "You just won 10000$ lottery!! Contact at this number to claim"
+]
+emails_vector = vector.transform(emails)
+model.predict(emails_vector)
+array([1, 0, 0, 1])
+2. Creating a Pipeline consisting all the steps.
+The main advantage of pipelines is to elimate all the repetitive work
+Using the Pipeline class from sklearn to declare steps
+Note: This will be our model since MultinomialNB object is created in step 2
+from sklearn.pipeline import Pipeline
+model_pl = Pipeline([
+    ('vectorizer', CountVectorizer()),
+    ('nb', MultinomialNB())
+])
+model_pl.fit(X_train, y_train)
+Pipeline(steps=[('vectorizer', CountVectorizer()), ('nb', MultinomialNB())])
+model_pl.score(X_test, y_test)
+0.9870782483847811
+model_pl.predict(emails)
+array([1, 0, 0, 1])
